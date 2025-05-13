@@ -27,6 +27,9 @@ function createBot() {
     console.log(`${config.username} has spawned in the server!`)
     reconnectAttempts = 0
     loginAttempts = 0
+    if (!isLoggedIn) {
+      console.log('Waiting for AuthMe login before starting movement')
+    }
   })
 
   // Handle AuthMe prompts
@@ -41,7 +44,7 @@ function createBot() {
           bot.chat(`/register ${config.authmePassword} ${config.authmePassword}`)
           console.log(`AuthMe: Sent /register ${config.authmePassword} ${config.authmePassword}`)
           isRegistered = true
-        }, 1000) // 1-second delay
+        }, 500) // 500ms delay
       }
     } else if (msg.includes('login with /login') || msg.includes('please login')) {
       if (loginAttempts < maxLoginAttempts) {
@@ -50,7 +53,7 @@ function createBot() {
           bot.chat(`/login ${config.authmePassword}`)
           console.log(`AuthMe: Sent /login ${config.authmePassword} (Attempt ${loginAttempts + 1})`)
           loginAttempts++
-        }, 1000) // 1-second delay
+        }, 500) // 500ms delay
       } else {
         console.log('AuthMe: Max login attempts reached, resetting registration')
         isRegistered = false
@@ -104,8 +107,13 @@ function createBot() {
 
 // Movement function (starts after login)
 function startMovement(bot) {
-  if (!isLoggedIn) return // Only move if logged in
+  if (!isLoggedIn) {
+    console.log('Movement not started: Not logged in')
+    return
+  }
+  console.log('Starting anti-AFK movement')
   setInterval(() => {
+    if (!isLoggedIn) return // Stop if logged out
     try {
       const moveType = Math.random()
       let action
@@ -132,4 +140,11 @@ function startMovement(bot) {
       }
 
       console.log(`Moving: ${action}`)
-      bot
+      bot.look(Math.random() * 360, Math.random() * 180 - 90)
+    } catch (err) {
+      console.error('Error in anti-AFK actions:', err)
+    }
+  }, 30000 + Math.random() * 30000) // 30-60 seconds
+}
+
+createBot()
