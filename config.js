@@ -1,6 +1,7 @@
 module.exports = {
-  host: 'BOOOOOM69.aternos.me', // Your Aternos server IP
-  port: 57404, // Your server port
-  username: 'Tehelka', // Bot's in-game username
-  version: '1.21.5' // Your server version
+  host: 'BOOOOOM69.aternos.me',
+  port: 57404,
+  username: 'Tehelka',
+  version: false, // Auto-detect to fix PartialReadError
+  authmePassword: process.env.AUTHME_PASSWORD // Set in Railway Variables (e.g., Tehelka123)
 }
