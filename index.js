@@ -5,14 +5,6 @@ let reconnectAttempts = 0
 const maxReconnectDelay = 60000 // 60 seconds
 let isRegistered = false // Tracks if bot has registered (resets on restart)
 
-const chatMessages = [
-  'I’m here!',
-  'Still active!',
-  'Tehelka’s alive!',
-  'Keeping the server alive!',
-  'BOOOOOM!'
-]
-
 function createBot() {
   if (!config.authmePassword) {
     console.error('Error: AUTHME_PASSWORD not set in environment variables')
@@ -32,26 +24,38 @@ function createBot() {
     console.log(`${config.username} has spawned in the server!`)
     reconnectAttempts = 0
 
-    // Anti-AFK: Chat and move every 30-60 seconds
+    // Anti-AFK: Move with WASD and jump every 30-60 seconds
     setInterval(() => {
       try {
-        const message = chatMessages[Math.floor(Math.random() * chatMessages.length)]
-        bot.chat(message)
-        console.log(`Sent chat: ${message}`)
-
         const moveType = Math.random()
-        if (moveType < 0.3) {
+        if (moveType < 0.2) {
+          // Forward (W)
           bot.setControlState('forward', true)
           setTimeout(() => bot.setControlState('forward', false), 500)
+          console.log('Moving: Forward')
+        } else if (moveType < 0.4) {
+          // Backward (S)
+          bot.setControlState('back', true)
+          setTimeout(() => bot.setControlState('back', false), 500)
+          console.log('Moving: Backward')
         } else if (moveType < 0.6) {
+          // Left (A)
+          bot.setControlState('left', true)
+          setTimeout(() => bot.setControlState('left', false), 500)
+          console.log('Moving: Left')
+        } else if (moveType < 0.8) {
+          // Right (D)
+          bot.setControlState('right', true)
+          setTimeout(() => bot.setControlState('right', false), 500)
+          console.log('Moving: Right')
+        } else {
+          // Jump
           bot.setControlState('jump', true)
           setTimeout(() => bot.setControlState('jump', false), 200)
-        } else {
-          const direction = Math.random() < 0.5 ? 'left' : 'right'
-          bot.setControlState(direction, true)
-          setTimeout(() => bot.setControlState(direction, false), 300)
+          console.log('Moving: Jump')
         }
 
+        // Random look to appear natural
         bot.look(Math.random() * 360, Math.random() * 180 - 90)
       } catch (err) {
         console.error('Error in anti-AFK actions:', err)
@@ -92,8 +96,7 @@ function createBot() {
 
   bot.on('kicked', (reason) => {
     console.log(`Bot was kicked for reason: ${reason}`)
-    // Reset registration status on kick to handle re-registration if needed
-    isRegistered = false
+    isRegistered = false // Reset to handle re-registration
   })
 }
 
