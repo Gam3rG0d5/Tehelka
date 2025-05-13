@@ -28,34 +28,35 @@ function createBot() {
     setInterval(() => {
       try {
         const moveType = Math.random()
+        let action
         if (moveType < 0.2) {
           // Forward (W)
           bot.setControlState('forward', true)
           setTimeout(() => bot.setControlState('forward', false), 500)
-          console.log('Moving: Forward')
+          action = 'Forward'
         } else if (moveType < 0.4) {
           // Backward (S)
           bot.setControlState('back', true)
           setTimeout(() => bot.setControlState('back', false), 500)
-          console.log('Moving: Backward')
+          action = 'Backward'
         } else if (moveType < 0.6) {
           // Left (A)
           bot.setControlState('left', true)
           setTimeout(() => bot.setControlState('left', false), 500)
-          console.log('Moving: Left')
+          action = 'Left'
         } else if (moveType < 0.8) {
           // Right (D)
           bot.setControlState('right', true)
           setTimeout(() => bot.setControlState('right', false), 500)
-          console.log('Moving: Right')
+          action = 'Right'
         } else {
           // Jump
           bot.setControlState('jump', true)
           setTimeout(() => bot.setControlState('jump', false), 200)
-          console.log('Moving: Jump')
+          action = 'Jump'
         }
 
-        // Random look to appear natural
+        console.log(`Moving: ${action}`)
         bot.look(Math.random() * 360, Math.random() * 180 - 90)
       } catch (err) {
         console.error('Error in anti-AFK actions:', err)
@@ -70,19 +71,26 @@ function createBot() {
 
     if (msg.includes('register with /register') || msg.includes('please register')) {
       if (!isRegistered) {
-        console.log('AuthMe: Sending /register command')
-        bot.chat(`/register ${config.authmePassword} ${config.authmePassword}`)
-        isRegistered = true
+        console.log('AuthMe: Preparing to send /register command')
+        setTimeout(() => {
+          bot.chat(`/register ${config.authmePassword} ${config.authmePassword}`)
+          console.log(`AuthMe: Sent /register ${config.authmePassword} ${config.authmePassword}`)
+          isRegistered = true
+        }, 2000) // 2-second delay
       }
     } else if (msg.includes('login with /login') || msg.includes('please login')) {
-      console.log('AuthMe: Sending /login command')
-      bot.chat(`/login ${config.authmePassword}`)
+      console.log('AuthMe: Preparing to send /login command')
+      setTimeout(() => {
+        bot.chat(`/login ${config.authmePassword}`)
+        console.log(`AuthMe: Sent /login ${config.authmePassword}`)
+      }, 2000) // 2-second delay
     }
   })
 
   bot.on('error', (err) => {
     console.error('Bot error:', err)
     if (err.message.includes('PartialReadError') || err.message.includes('ECONNRESET')) {
+      isRegistered = false // Reset to allow re-registration
       bot.quit()
     }
   })
