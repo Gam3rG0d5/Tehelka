@@ -1,15 +1,6 @@
-# Use the official Node.js image
 FROM node:18
-
-# Set working directory
-WORKDIR /app
-
-# Copy package.json and install dependencies
-COPY package.json .
-RUN npm install
-
-# Copy the rest of the application
-COPY . .
-
-# Command to run the bot
-CMD ["npm", "start"]
+  WORKDIR /app
+  COPY package.json .
+  RUN npm install
+  COPY . .
+  CMD ["npm", "start"]
