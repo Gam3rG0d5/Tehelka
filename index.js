@@ -3,7 +3,10 @@ const config = require('./config')
 
 let reconnectAttempts = 0
 const maxReconnectDelay = 60000 // 60 seconds
-let isRegistered = false // Tracks if bot has registered (resets on restart)
+let isRegistered = false // Tracks registration
+let loginAttempts = 0 // Tracks login retries
+const maxLoginAttempts = 3 // Max retries
+let isLoggedIn = false // Tracks login success
 
 function createBot() {
   if (!config.authmePassword) {
@@ -23,48 +26,10 @@ function createBot() {
   bot.on('spawn', () => {
     console.log(`${config.username} has spawned in the server!`)
     reconnectAttempts = 0
-
-    // Anti-AFK: Move with WASD and jump every 30-60 seconds
-    setInterval(() => {
-      try {
-        const moveType = Math.random()
-        let action
-        if (moveType < 0.2) {
-          // Forward (W)
-          bot.setControlState('forward', true)
-          setTimeout(() => bot.setControlState('forward', false), 500)
-          action = 'Forward'
-        } else if (moveType < 0.4) {
-          // Backward (S)
-          bot.setControlState('back', true)
-          setTimeout(() => bot.setControlState('back', false), 500)
-          action = 'Backward'
-        } else if (moveType < 0.6) {
-          // Left (A)
-          bot.setControlState('left', true)
-          setTimeout(() => bot.setControlState('left', false), 500)
-          action = 'Left'
-        } else if (moveType < 0.8) {
-          // Right (D)
-          bot.setControlState('right', true)
-          setTimeout(() => bot.setControlState('right', false), 500)
-          action = 'Right'
-        } else {
-          // Jump
-          bot.setControlState('jump', true)
-          setTimeout(() => bot.setControlState('jump', false), 200)
-          action = 'Jump'
-        }
-
-        console.log(`Moving: ${action}`)
-        bot.look(Math.random() * 360, Math.random() * 180 - 90)
-      } catch (err) {
-        console.error('Error in anti-AFK actions:', err)
-      }
-    }, 30000 + Math.random() * 30000) // 30-60 seconds
+    loginAttempts = 0
   })
 
-  // Handle AuthMe prompts via chat
+  // Handle AuthMe prompts
   bot.on('message', (message) => {
     const msg = message.toString().toLowerCase()
     console.log(`Chat message: ${msg}`)
@@ -76,21 +41,48 @@ function createBot() {
           bot.chat(`/register ${config.authmePassword} ${config.authmePassword}`)
           console.log(`AuthMe: Sent /register ${config.authmePassword} ${config.authmePassword}`)
           isRegistered = true
-        }, 2000) // 2-second delay
+        }, 1000) // 1-second delay
       }
     } else if (msg.includes('login with /login') || msg.includes('please login')) {
-      console.log('AuthMe: Preparing to send /login command')
-      setTimeout(() => {
-        bot.chat(`/login ${config.authmePassword}`)
-        console.log(`AuthMe: Sent /login ${config.authmePassword}`)
-      }, 2000) // 2-second delay
+      if (loginAttempts < maxLoginAttempts) {
+        console.log('AuthMe: Preparing to send /login command')
+        setTimeout(() => {
+          bot.chat(`/login ${config.authmePassword}`)
+          console.log(`AuthMe: Sent /login ${config.authmePassword} (Attempt ${loginAttempts + 1})`)
+          loginAttempts++
+        }, 1000) // 1-second delay
+      } else {
+        console.log('AuthMe: Max login attempts reached, resetting registration')
+        isRegistered = false
+        loginAttempts = 0
+        bot.quit()
+      }
+    } else if (msg.includes('successfully logged') || msg.includes('login successful')) {
+      console.log('AuthMe: Login confirmed')
+      isLoggedIn = true
+      startMovement(bot) // Start movement after login
+    }
+  })
+
+  // Packet error handling
+  bot.on('packet', (data, meta) => {
+    try {
+      // Process packet
+    } catch (err) {
+      if (err.message.includes('PartialReadError')) {
+        console.warn('Ignoring PartialReadError in packet processing:', err.message)
+      } else {
+        throw err
+      }
     }
   })
 
   bot.on('error', (err) => {
     console.error('Bot error:', err)
     if (err.message.includes('PartialReadError') || err.message.includes('ECONNRESET')) {
-      isRegistered = false // Reset to allow re-registration
+      isRegistered = false
+      loginAttempts = 0
+      isLoggedIn = false
       bot.quit()
     }
   })
@@ -104,8 +96,40 @@ function createBot() {
 
   bot.on('kicked', (reason) => {
     console.log(`Bot was kicked for reason: ${reason}`)
-    isRegistered = false // Reset to handle re-registration
+    isRegistered = false
+    loginAttempts = 0
+    isLoggedIn = false
   })
 }
 
-createBot()
+// Movement function (starts after login)
+function startMovement(bot) {
+  if (!isLoggedIn) return // Only move if logged in
+  setInterval(() => {
+    try {
+      const moveType = Math.random()
+      let action
+      if (moveType < 0.2) {
+        bot.setControlState('forward', true)
+        setTimeout(() => bot.setControlState('forward', false), 500)
+        action = 'Forward'
+      } else if (moveType < 0.4) {
+        bot.setControlState('back', true)
+        setTimeout(() => bot.setControlState('back', false), 500)
+        action = 'Backward'
+      } else if (moveType < 0.6) {
+        bot.setControlState('left', true)
+        setTimeout(() => bot.setControlState('left', false), 500)
+        action = 'Left'
+      } else if (moveType < 0.8) {
+        bot.setControlState('right', true)
+        setTimeout(() => bot.setControlState('right', false), 500)
+        action = 'Right'
+      } else {
+        bot.setControlState('jump', true)
+        setTimeout(() => bot.setControlState('jump', false), 200)
+        action = 'Jump'
+      }
+
+      console.log(`Moving: ${action}`)
+      bot
